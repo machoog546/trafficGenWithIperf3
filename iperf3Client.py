@@ -1,23 +1,50 @@
-import iperf3, time, threading
+import iperf3, time
+import multiprocessing as mp
 
-def client():
+def client_side(cli, serv, port, YesNo):
+
+	if YesNo: #if you only want some of the processes, this will skip log creation
+		f = open("port_" + str(port) + ".txt", "w+")
 	
-	print("starting client")
-	client = iperf3.Client()
-	client.Duration = 4
-	client.bind_address="192.168.200.10"
-	client.server_hostname='192.168.200.20'
-	client.port=6969
-	#client.json_output=False
-	time.sleep(2) #used to make sure server is up and ready
-	result=client.run()
+	traffic=iperf3.Client()
+	traffic.duration=90
+	traffic.bind_address=cli
+	traffic.server_hostname = serv
+	traffic.port=port
+	traffic.bandwidth = 180000000 #180Mbps-ish
+	result = traffic.run()
+	time.sleep(2)
+		
+	if YesNo:
+		result = str(result)
+		time.sleep(1)
+		
+		f.write(result)
+		f.close() #Not needed but i want to make sure it saves
+
+clients = [6969, 6970,6971,6971] #not needed. can be put in the args space of the MP call
+
+threads =[]
+print("starting")
+c1 = mp.Process(target=client_side, args=("192.168.201.10", "192.168.201.20", clients[0], True,))#, daemon  = True) #not sure if needed. 
+threads.append(c1)
+c2 = mp.Process(target=client_side, args=("192.168.202.10", "192.168.202.20", clients[1], True,))#, daemon  = True) #need faster hardware
+threads.append(c2)
+c3 = mp.Process(target=client_side, args=("192.168.203.10", "192.168.203.20", clients[2], True,))#, daemon  = True)
+threads.append(c3)
+c4 = mp.Process(target=client_side, args=("192.168.204.10", "192.168.204.20", clients[3], True,))#, daemon  = True)
+threads.append(c4)
+
+print(threads)  #checking if appended correctly
+for thread in threads:
+	print("Starting " + str(thread))
+	thread.start()
+	time.sleep(2)
 	
 
-	print(result)
-	
+for thread in threads:
 
-c = threading.Thread(target=client)
+	thread.join()
+	time.sleep(1)
 
-c.start()
-
-#assuming we will thread multiple clinets or this should be running while other checks are be going.
+print("Complete")
